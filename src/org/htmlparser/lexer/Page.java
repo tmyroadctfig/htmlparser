@@ -38,6 +38,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.UnknownHostException;
+import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterInputStream;
@@ -54,6 +55,8 @@ public class Page
     implements
         Serializable
 {
+    private static final Logger logger = Logger.getLogger("org.htmlparser.lexer");
+
     /**
      * The default charset.
      * This should be <code>{@value}</code>,
@@ -107,6 +110,11 @@ public class Page
      */
     protected static ConnectionManager mConnectionManager =
         new ConnectionManager ();
+
+    /**
+     * Flag to make sure encoding is only changed once.
+     */
+    private boolean wasCharsetFound = false;
 
     /**
      * Construct an empty page.
@@ -318,7 +326,7 @@ public class Page
      * @param fallback The name to return if the lookup fails.
      * @return The character set name.
      */
-    public static String findCharset (String name, String fallback)
+    public String findCharset (String name, String fallback)
     {
         String ret;
 
@@ -356,7 +364,7 @@ public class Page
             // and java.nio.charset.UnsupportedCharsetException
             // return the default
             ret = fallback;
-            System.out.println (
+            logger.warning(
                 "unable to determine cannonical charset name for "
                 + name
                 + " - using "
@@ -862,7 +870,11 @@ public class Page
         throws
             ParserException
     {
-        getSource ().setEncoding (character_set);
+        if(!wasCharsetFound)
+        {
+            getSource ().setEncoding (character_set);
+            wasCharsetFound = true;
+        }
     }
 
     /**

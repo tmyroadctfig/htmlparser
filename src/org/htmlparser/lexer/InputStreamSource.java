@@ -290,7 +290,8 @@ public class InputStreamSource
                                 + " to "
                                 + character_set
                                 + " at character offset "
-                                + i);
+                                + i,
+                                encoding, character_set);
                     }
                 }
                 catch (IOException ioe)

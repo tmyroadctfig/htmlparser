@@ -1446,7 +1446,7 @@ public class Lexer
                                 }
                                 while ((Page.EOF != ch) && ('/' != ch));
                             }
-                            else
+                            else if (ch != Page.EOF)
                                 mPage.ungetCharacter (mCursor);
                             break;
                         default:  // <%???x
