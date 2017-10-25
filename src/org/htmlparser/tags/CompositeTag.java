@@ -187,7 +187,7 @@ public class CompositeTag extends TagNode
         if (!isEmptyXmlTag ())
         {
             putChildrenInto (ret, verbatim);
-            if (null != getEndTag ())
+            if (null != getEndTag () && this != getEndTag ())
                 putEndTagInto (ret, verbatim);
         }
         return (ret.toString ());
