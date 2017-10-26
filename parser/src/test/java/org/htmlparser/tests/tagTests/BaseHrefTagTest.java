@@ -91,7 +91,7 @@ public class BaseHrefTagTest extends ParserTestCase {
         String absolute_url;
 
         parser = new Parser ();
-        url = "http://www.codeproject.com";
+        url = "https://www.codeproject.com";
         relative_url = "/favicon.ico";
         
         props = new Hashtable<String,String> ();
