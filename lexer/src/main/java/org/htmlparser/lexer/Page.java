@@ -25,8 +25,8 @@
 
 package org.htmlparser.lexer;
 
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
@@ -41,6 +41,7 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterInputStream;
 
+import org.apache.log4j.Logger;
 import org.htmlparser.http.ConnectionManager;
 import org.htmlparser.util.ParserException;
 
@@ -57,6 +58,11 @@ Serializable
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
+
+  /**
+   * The logger.
+   */
+  private static final Logger logger = Logger.getLogger(Page.class);
 
 /**
    * The default charset.
@@ -111,6 +117,11 @@ Serializable
    */
   protected static ConnectionManager mConnectionManager =
     new ConnectionManager ();
+
+  /**
+   * Flag to make sure encoding is only changed once.
+   */
+  private boolean wasCharsetFound = false;
 
   /**
    * Construct an empty page.
@@ -322,7 +333,7 @@ Serializable
    * @param fallback The name to return if the lookup fails.
    * @return The character set name.
    */
-  public static String findCharset (String name, String fallback)
+  public String findCharset (String name, String fallback)
   {
     String ret;
 
@@ -360,7 +371,7 @@ Serializable
       // and java.nio.charset.UnsupportedCharsetException
       // return the default
       ret = fallback;
-      System.out.println (
+      logger.warn (
               "unable to determine cannonical charset name for "
               + name
               + " - using "
@@ -902,7 +913,11 @@ Serializable
   throws
   ParserException
   {
-    getSource ().setEncoding (character_set);
+      if(!wasCharsetFound)
+      {
+          getSource ().setEncoding (character_set);
+          wasCharsetFound = true;
+      }
   }
 
   /**
