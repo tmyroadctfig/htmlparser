@@ -29,8 +29,8 @@ import java.util.Vector;
 
 import org.htmlparser.Attribute;
 import org.htmlparser.Node;
-import org.htmlparser.lexer.Lexer;
 import org.htmlparser.Tag;
+import org.htmlparser.lexer.Lexer;
 import org.htmlparser.util.NodeList;
 import org.htmlparser.util.ParserException;
 
@@ -41,7 +41,7 @@ import org.htmlparser.util.ParserException;
 public class StyleScanner extends CompositeTagScanner
 {
     /**
-	 * 
+	 *
 	 */
 	private static final long serialVersionUID = 1L;
 
@@ -68,7 +68,7 @@ public class StyleScanner extends CompositeTagScanner
         Attribute attribute;
         Vector<Attribute> vector;
 
-        content = lexer.parseCDATA ();
+        content = lexer.parseCDATA (false, true);
         position = lexer.getPosition ();
         node = lexer.nextNode (false);
         if (null != node)
