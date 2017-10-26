@@ -437,7 +437,24 @@ public class Lexer
      * @see #parseCDATA()
      * @exception ParserException If a problem occurs reading from the source.
      */
-    public Node parseCDATA (boolean quotesmart)
+    public Node parseCDATA (boolean quotesmart) throws ParserException
+    {
+        return parseCDATA(quotesmart, false);
+    }
+
+    /**
+     * Return CDATA as a text node.
+     * Slightly less rigid than {@link #parseCDATA()} this method provides for
+     * parsing CDATA that may contain quoted strings that have embedded
+     * ETAGO ("&lt;/") delimiters and skips single and multiline comments.
+     * @param quotesmart If <code>true</code> the strict definition of CDATA is
+     * extended to allow for single or double quoted ETAGO ("&lt;/") sequences.
+     * @param ignoreComments {@code true} if comments should be ignored while parsing, i.e. treated as text.
+     * @return The <code>TextNode</code> of the CDATA or <code>null</code> if none.
+     * @see #parseCDATA()
+     * @exception ParserException If a problem occurs reading from the source.
+     */
+    public Node parseCDATA (boolean quotesmart, boolean ignoreComments)
         throws
             ParserException
     {
@@ -545,6 +562,11 @@ public class Lexer
                             state = 2;
                             break;
                         case '!':
+                            if (ignoreComments)
+                            {
+                                state = 0;
+                                break;
+                            }
                             ch = mPage.getCharacter (mCursor);
                             if (Page.EOF == ch)
                                 done = true;
@@ -1216,11 +1238,14 @@ public class Lexer
      * <li>state 2 - prior to the first closing delimiter (first dash)</li>
      * <li>state 3 - prior to the second closing delimiter (second dash)</li>
      * <li>state 4 - prior to the terminating &gt;</li>
+     * <li>state 5 - inside a comment, after a &lt;</li>
+     * <li>state 6 - inside a comment, after a &lt; and / </li>
      * </ol>
      * <p>
      * All comment text (everything excluding the &lt; and &gt;), is included
      * in the remark text.
      * We allow terminators like --!&gt; even though this isn't part of the spec.
+     * &lt;/style&gt; is also a terminator to handle some hacks people used inside the style tag.
      * @param start The position at which to start scanning.
      * @param quotesmart If <code>true</code>, strings ignore quoted contents.
      * @return The parsed node.
@@ -1236,6 +1261,7 @@ public class Lexer
 
         done = false;
         state = 0;
+        int tagStartPosition = -1;
         while (!done)
         {
             ch = mPage.getCharacter (mCursor);
@@ -1272,9 +1298,15 @@ public class Lexer
                         break;
                     case 2: // prior to the first closing delimiter
                         if ('-' == ch)
+                        {
                             state = 3;
-                        else if (Page.EOF == ch)
-                            return (parseString (start, quotesmart)); // no terminator
+                        }
+                        else if ('<' == ch)
+                        {
+                            // Possibly the start of a tag
+                            tagStartPosition = mCursor.getPosition();
+                            state = 5;
+                        }
                         break;
                     case 3: // prior to the second closing delimiter
                         if ('-' == ch)
@@ -1284,20 +1316,61 @@ public class Lexer
                         break;
                     case 4: // prior to the terminating >
                         if ('>' == ch)
+                        {
                             done = true;
+                        }
                         else if (Character.isWhitespace (ch))
                         {
                             // stay in state 4
                         }
                         else
+                        {
                             if (!STRICT_REMARKS && (('-' == ch) || ('!' == ch)))
                             {
                                 // stay in state 4
                             }
                             else
+                            {
                                 // bug #1345049 HTMLParser should not terminate a comment with --->
                                 // should maybe issue a warning mentioning STRICT_REMARKS
                                 state = 2;
+                            }
+                        }
+                        break;
+                    case 5: // inside a comment, after a <
+                        if ('/' == ch)
+                        {
+                            state = 6;
+                        }
+                        else
+                        {
+                            state = 2; // back to: inside the comment state
+                        }
+                        break;
+                    case 6: // inside a comment, after a '</'
+
+                        // Skip any whitespace
+                        while (Character.isWhitespace(ch))
+                        {
+                            ch = mPage.getCharacter(mCursor);
+                        }
+
+                        if ('s' == ch &&
+                            mPage.getCharacter(mCursor) == 't' &&
+                            mPage.getCharacter(mCursor) == 'y' &&
+                            mPage.getCharacter(mCursor) == 'l' &&
+                            mPage.getCharacter(mCursor) == 'e')
+                        {
+                            // Hit '</style>' inside a comment. Assume this is the end of the comment, and this is a block like:
+                            //   <style><!--
+                            //     p { color: ffffff; }
+                            //   </style>
+                            return makeRemark(start, tagStartPosition);
+                        }
+                        else
+                        {
+                            state = 2; // back to: inside the comment state
+                        }
                         break;
                     default:
                         throw new IllegalStateException ("how the fuck did we get in state " + state);
